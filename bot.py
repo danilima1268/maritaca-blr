@@ -214,7 +214,10 @@ if __name__ == "__main__":
     bot.run(token)
   else:
     print("Erro: A variável de ambiente DISCORD_TOKEN não está definida!")
-    # Comando /rank para criar a tabela de líderes Top 10
+    import discord
+from discord import app_commands
+
+
 @bot.tree.command(
     name="rank", description="Cria e exibe o Ranking Top 10 do Blue Lock Rivals"
 )
@@ -264,7 +267,7 @@ async def rank(
   embed = discord.Embed(
       title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
       description=descricao,
-      color=discord.Color.from_rgb(255, 215, 0),  # Dourado
+      color=discord.Color.from_rgb(255, 215, 0),
   )
   embed.set_footer(
       text=f"Ranking atualizado por {interaction.user.display_name}"
