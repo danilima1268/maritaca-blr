@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-# 1. Servidor web Flask para o Render manter a porta aberta
+# 1. Servidor web Flask para o Render manter a porta aberta 24/7
 app = Flask("")
 
 
@@ -44,19 +44,18 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. Painel de Escalação (Com suporte a moldar posições iniciais + Anti-Roubo)
+# 3. View do Painel de Escalação
 class EscalacaoView(discord.ui.View):
 
-  def __init__(
-      self,
-      cf="Vaga Disponível",
-      lw="Vaga Disponível",
-      rw="Vaga Disponível",
-      cm="Vaga Disponível",
-      gk="Vaga Disponível",
-  ):
+  def __init__(self):
     super().__init__(timeout=None)
-    self.vagas = {"CF": cf, "LW": lw, "RW": rw, "CM": cm, "GK": gk}
+    self.vagas = {
+        "CF": "Vaga Disponível",
+        "LW": "Vaga Disponível",
+        "RW": "Vaga Disponível",
+        "CM": "Vaga Disponível",
+        "GK": "Vaga Disponível",
+    }
 
   def gerar_mensagem(self):
     return (
@@ -69,27 +68,38 @@ class EscalacaoView(discord.ui.View):
         f"🔸 **GK**: {self.vagas['GK']}"
     )
 
-  async def ocupar_vaga(
+  async def processar_clique(
       self, interaction: discord.Interaction, posicao: str
   ):
     user_nome = interaction.user.display_name
 
+    # Verifica se o utilizador já está noutra posição. Se estiver, remove-o de lá primeiro para permitir a troca.
+    for pos, ocupante in self.vagas.items():
+      if ocupante == user_nome:
+        self.vagas[pos] = "Vaga Disponível"
+
+    # Se a posição escolhida já estava ocupada por outra pessoa (e não era ele próprio)
+    if self.vagas[posicao] != "Vaga Disponível" and self.vagas[posicao] != user_nome:
+      # Como limpamos o user acima se ele já estivesse noutra, reatribuímos caso ele estivesse exatamente nesta (o que aciona o cancelamento)
+      pass
+
+    # Lógica de Ocupar / Cancelar
     if self.vagas[posicao] == "Vaga Disponível":
       self.vagas[posicao] = user_nome
       await interaction.response.edit_message(
           content=self.gerar_mensagem(), view=self
       )
+    elif self.vagas[posicao] == user_nome:
+      # Clicou na mesma posição onde já estava -> Cancela / Liberta a vaga
+      self.vagas[posicao] = "Vaga Disponível"
+      await interaction.response.edit_message(
+          content=self.gerar_mensagem(), view=self
+      )
     else:
-      if self.vagas[posicao] == user_nome:
-        self.vagas[posicao] = "Vaga Disponível"
-        await interaction.response.edit_message(
-            content=self.gerar_mensagem(), view=self
-        )
-      else:
-        await interaction.response.send_message(
-            f"Esta posição já está ocupada por {self.vagas[posicao]}!",
-            ephemeral=True,
-        )
+      await interaction.response.send_message(
+          f"Esta posição já está ocupada por {self.vagas[posicao]}!",
+          ephemeral=True,
+      )
 
   @discord.ui.button(
       label="CF", style=discord.ButtonStyle.green, custom_id="pos_cf"
@@ -97,7 +107,7 @@ class EscalacaoView(discord.ui.View):
   async def cf_button(
       self, interaction: discord.Interaction, button: discord.ui.Button
   ):
-    await self.ocupar_vaga(interaction, "CF")
+    await self.processar_clique(interaction, "CF")
 
   @discord.ui.button(
       label="LW", style=discord.ButtonStyle.blurple, custom_id="pos_lw"
@@ -105,7 +115,7 @@ class EscalacaoView(discord.ui.View):
   async def lw_button(
       self, interaction: discord.Interaction, button: discord.ui.Button
   ):
-    await self.ocupar_vaga(interaction, "LW")
+    await self.processar_clique(interaction, "LW")
 
   @discord.ui.button(
       label="RW", style=discord.ButtonStyle.blurple, custom_id="pos_rw"
@@ -113,7 +123,7 @@ class EscalacaoView(discord.ui.View):
   async def rw_button(
       self, interaction: discord.Interaction, button: discord.ui.Button
   ):
-    await self.ocupar_vaga(interaction, "RW")
+    await self.processar_clique(interaction, "RW")
 
   @discord.ui.button(
       label="CM", style=discord.ButtonStyle.blurple, custom_id="pos_cm"
@@ -121,7 +131,7 @@ class EscalacaoView(discord.ui.View):
   async def cm_button(
       self, interaction: discord.Interaction, button: discord.ui.Button
   ):
-    await self.ocupar_vaga(interaction, "CM")
+    await self.processar_clique(interaction, "CM")
 
   @discord.ui.button(
       label="GK", style=discord.ButtonStyle.red, custom_id="pos_gk"
@@ -129,73 +139,10 @@ class EscalacaoView(discord.ui.View):
   async def gk_button(
       self, interaction: discord.Interaction, button: discord.ui.Button
   ):
-    await self.ocupar_vaga(interaction, "GK")
+    await self.processar_clique(interaction, "GK")
 
 
-# 4. View Interativa para o X1
-class X1View(discord.ui.View):
-
-  def __init__(self, desafiante: discord.Member, adversario: discord.Member):
-    super().__init__(timeout=60)
-    self.desafiante = desafiante
-    self.adversario = adversario
-
-  @discord.ui.button(
-      label="Aceitar", style=discord.ButtonStyle.green, emoji="✅"
-  )
-  async def aceitar(
-      self, interaction: discord.Interaction, button: discord.ui.Button
-  ):
-    if interaction.user.id != self.adversario.id:
-      await interaction.response.send_message(
-          "Apenas o jogador desafiado pode responder a este convite!",
-          ephemeral=True,
-      )
-      return
-
-    for child in self.children:
-      child.disabled = True
-
-    embed = discord.Embed(
-        title="⚔️ X1 ACEITE — BLUE LOCK RIVALS",
-        description=(
-            f"O duelo entre {self.desafiante.mention} e"
-            f" {self.adversario.mention} foi **CONFIRMADO**! ⚽🔥"
-        ),
-        color=discord.Color.green(),
-    )
-    await interaction.response.edit_message(embed=embed, view=self)
-    self.stop()
-
-  @discord.ui.button(
-      label="Rejeitar", style=discord.ButtonStyle.red, emoji="✖️"
-  )
-  async def rejeitar(
-      self, interaction: discord.Interaction, button: discord.ui.Button
-  ):
-    if interaction.user.id != self.adversario.id:
-      await interaction.response.send_message(
-          "Apenas o jogador desafiado pode responder a este convite!",
-          ephemeral=True,
-      )
-      return
-
-    for child in self.children:
-      child.disabled = True
-
-    embed = discord.Embed(
-        title="❌ DESAFIO RECUSADO",
-        description=(
-            f"{self.adversario.mention} recusou o desafio de X1 de"
-            f" {self.desafiante.mention}."
-        ),
-        color=discord.Color.red(),
-    )
-    await interaction.response.edit_message(embed=embed, view=self)
-    self.stop()
-
-
-# 5. Comandos de Barra (Slash Commands)
+# 4. Comando /escalacao
 @bot.tree.command(
     name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
 )
@@ -204,129 +151,7 @@ async def escalacao(interaction: discord.Interaction):
   await interaction.response.send_message(view.gerar_mensagem(), view=view)
 
 
-@bot.tree.command(
-    name="moldar_escalacao",
-    description=(
-        "Cria um novo painel interativo moldado com jogadores específicos"
-    ),
-)
-@app_commands.describe(
-    cf="Jogador para a posição CF",
-    lw="Jogador para a posição LW",
-    rw="Jogador para a posição RW",
-    cm="Jogador para a posição CM",
-    gk="Jogador para a posição GK",
-)
-async def moldar_escalacao(
-    interaction: discord.Interaction,
-    cf: discord.Member = None,
-    lw: discord.Member = None,
-    rw: discord.Member = None,
-    cm: discord.Member = None,
-    gk: discord.Member = None,
-):
-  cf_str = cf.display_name if cf else "Vaga Disponível"
-  lw_str = lw.display_name if lw else "Vaga Disponível"
-  rw_str = rw.display_name if rw else "Vaga Disponível"
-  cm_str = cm.display_name if cm else "Vaga Disponível"
-  gk_str = gk.display_name if gk else "Vaga Disponível"
-
-  view = EscalacaoView(
-      cf=cf_str, lw=lw_str, rw=rw_str, cm=cm_str, gk=gk_str
-  )
-  await interaction.response.send_message(view.gerar_mensagem(), view=view)
-
-
-@bot.tree.command(
-    name="rank", description="Cria e exibe o Ranking Top 10 do Blue Lock Rivals"
-)
-@app_commands.describe(
-    top1="Jogador em 1º lugar",
-    top2="Jogador em 2º lugar",
-    top3="Jogador em 3º lugar",
-    top4="Jogador em 4º lugar",
-    top5="Jogador em 5º lugar",
-    top6="Jogador em 6º lugar",
-    top7="Jogador em 7º lugar",
-    top8="Jogador em 8º lugar",
-    top9="Jogador em 9º lugar",
-    top10="Jogador em 10º lugar",
-)
-async def rank(
-    interaction: discord.Interaction,
-    top1: discord.Member = None,
-    top2: discord.Member = None,
-    top3: discord.Member = None,
-    top4: discord.Member = None,
-    top5: discord.Member = None,
-    top6: discord.Member = None,
-    top7: discord.Member = None,
-    top8: discord.Member = None,
-    top9: discord.Member = None,
-    top10: discord.Member = None,
-):
-  posicoes = [
-      ("👑 1º Lugar", top1),
-      ("🥈 2º Lugar", top2),
-      ("🥉 3º Lugar", top3),
-      ("4º Lugar", top4),
-      ("5º Lugar", top5),
-      ("6º Lugar", top6),
-      ("7º Lugar", top7),
-      ("8º Lugar", top8),
-      ("9º Lugar", top9),
-      ("10º Lugar", top10),
-  ]
-
-  descricao = ""
-  for label, membro in posicoes:
-    mencao = membro.mention if membro else "*(Vago)*"
-    descricao += f"**{label}:** {mencao}\n"
-
-  embed = discord.Embed(
-      title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
-      description=descricao,
-      color=discord.Color.from_rgb(255, 215, 0),
-  )
-  embed.set_footer(
-      text=f"Ranking atualizado por {interaction.user.display_name}"
-  )
-
-  await interaction.response.send_message(embed=embed)
-
-
-@bot.tree.command(
-    name="x1", description="Envia um desafio de X1 para outro jogador"
-)
-@app_commands.describe(adversario="Menciona o jogador para o X1")
-async def x1(interaction: discord.Interaction, adversario: discord.Member):
-  if adversario.id == interaction.user.id:
-    await interaction.response.send_message(
-        "Não podes desafiar-te a ti próprio para um X1!", ephemeral=True
-    )
-    return
-
-  if adversario.bot:
-    await interaction.response.send_message(
-        "Não podes desafiar um bot para um X1!", ephemeral=True
-    )
-    return
-
-  view = X1View(interaction.user, adversario)
-  mensagem = (
-      f"👀 {adversario.mention}, foste desafiado por {interaction.user.mention}"
-      " para um X1 no Blue Lock Rivals!"
-  )
-
-  await interaction.response.send_message(mensagem, view=view)
-
-
-@bot.tree.command(name="ping", description="Verifica o estado do bot")
-async def ping(interaction: discord.Interaction):
-  await interaction.response.send_message("Pong! ⚽ Bot operacional.")
-
-
-# 6. Arranque
+# 5. Arranque do Bot
 if __name__ == "__main__":
   keep_alive()
   token = os.getenv("DISCORD_TOKEN")
