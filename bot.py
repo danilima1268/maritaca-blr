@@ -44,7 +44,7 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. Painel de Escalação (Com Embed Estético)
+# 3. Painel de Escalação (Estilo antigo com proteção anti-roubo)
 class EscalacaoView(discord.ui.View):
 
   def __init__(self):
@@ -59,47 +59,43 @@ class EscalacaoView(discord.ui.View):
 
   def gerar_embed(self):
     embed = discord.Embed(
-        title="⚽ PAINEL DE ESCALAÇÃO — BLUE LOCK RIVALS",
-        description=(
-            "Clica nos botões abaixo para garantir a tua posição no time titular!"
-            " Podes clicar novamente para sair da vaga."
-        ),
+        title="⚽ ESCALAÇÃO — BLUE LOCK RIVALS",
+        description="Clique no botão correspondente para garantir a sua posição:",
         color=discord.Color.from_rgb(0, 162, 255),
     )
     embed.add_field(
-        name="Posições Ofensivas & Meio-Campo",
+        name="",
         value=(
-            f"🔸 **CF (Avançado):** {self.vagas['CF']}\n"
-            f"🔹 **LW (Ponta Esq.):** {self.vagas['LW']}\n"
-            f"🔹 **RW (Ponta Dir.):** {self.vagas['RW']}\n"
-            f"🔹 **CM (Médio Centro):** {self.vagas['CM']}"
+            f"🔹 **CF**: {self.vagas['CF']}\n"
+            f"🔹 **LW**: {self.vagas['LW']}\n"
+            f"🔹 **RW**: {self.vagas['RW']}\n"
+            f"🔹 **CM**: {self.vagas['CM']}\n"
+            f"🔹 **GK**: {self.vagas['GK']}"
         ),
         inline=False,
     )
-    embed.add_field(
-        name="Defesa",
-        value=f"🛡️ **GK (Guarda-Redes):** {self.vagas['GK']}",
-        inline=False,
-    )
-    embed.set_footer(text="Blue Lock Rivals • Sistema Oficial de Escalação")
     return embed
 
   async def ocupar_vaga(
       self, interaction: discord.Interaction, posicao: str
   ):
     user_nome = interaction.user.display_name
+
+    # Se a vaga estiver livre, o utilizador ocupa-a
     if self.vagas[posicao] == "Vaga Disponível":
       self.vagas[posicao] = user_nome
       await interaction.response.edit_message(
           embed=self.gerar_embed(), view=self
       )
     else:
+      # Se o próprio utilizador já estiver na vaga, ele sai (liberta a vaga)
       if self.vagas[posicao] == user_nome:
         self.vagas[posicao] = "Vaga Disponível"
         await interaction.response.edit_message(
             embed=self.gerar_embed(), view=self
         )
       else:
+        # Se estiver ocupado por outra pessoa, bloqueia e avisa
         await interaction.response.send_message(
             f"Esta posição já está ocupada por {self.vagas[posicao]}!",
             ephemeral=True,
@@ -146,7 +142,7 @@ class EscalacaoView(discord.ui.View):
     await self.ocupar_vaga(interaction, "GK")
 
 
-# 4. View Interativa para o X1 (Com Embed Estético)
+# 4. View Interativa para o X1
 class X1View(discord.ui.View):
 
   def __init__(self, desafiante: discord.Member, adversario: discord.Member):
@@ -155,7 +151,7 @@ class X1View(discord.ui.View):
     self.adversario = adversario
 
   @discord.ui.button(
-      label="Aceitar Desafio", style=discord.ButtonStyle.green, emoji="✅"
+      label="Aceitar", style=discord.ButtonStyle.green, emoji="✅"
   )
   async def aceitar(
       self, interaction: discord.Interaction, button: discord.ui.Button
@@ -173,18 +169,16 @@ class X1View(discord.ui.View):
     embed = discord.Embed(
         title="⚔️ X1 ACEITE — BLUE LOCK RIVALS",
         description=(
-            f"O duelo épico entre {self.desafiante.mention} e"
+            f"O duelo entre {self.desafiante.mention} e"
             f" {self.adversario.mention} foi **CONFIRMADO**! ⚽🔥"
         ),
         color=discord.Color.green(),
     )
-    embed.set_footer(text="Que vença o melhor egoísta!")
-
     await interaction.response.edit_message(embed=embed, view=self)
     self.stop()
 
   @discord.ui.button(
-      label="Recusar", style=discord.ButtonStyle.red, emoji="✖️"
+      label="Rejeitar", style=discord.ButtonStyle.red, emoji="✖️"
   )
   async def rejeitar(
       self, interaction: discord.Interaction, button: discord.ui.Button
@@ -207,7 +201,6 @@ class X1View(discord.ui.View):
         ),
         color=discord.Color.red(),
     )
-
     await interaction.response.edit_message(embed=embed, view=self)
     self.stop()
 
@@ -247,20 +240,74 @@ async def moldar_escalacao(
   gk_str = gk.mention if gk else "Vaga Disponível"
 
   embed = discord.Embed(
-      title="📋 TÁTICA MOLDADA — BLUE LOCK RIVALS",
-      description=f"Escalação definida por {interaction.user.mention}",
+      title="⚽ ESCALAÇÃO MOLDADA — BLUE LOCK RIVALS",
+      description=(
+          "Clique no botão correspondente para garantir a sua posição:\n\n"
+          f"🔹 **CF**: {cf_str}\n"
+          f"🔹 **LW**: {lw_str}\n"
+          f"🔹 **RW**: {rw_str}\n"
+          f"🔹 **CM**: {cm_str}\n"
+          f"🔹 **GK**: {gk_str}\n\n"
+          f"Escalação definida por: {interaction.user.mention}"
+      ),
       color=discord.Color.gold(),
   )
-  embed.add_field(
-      name="Posições",
-      value=(
-          f"🔸 **CF:** {cf_str}\n"
-          f"🔹 **LW:** {lw_str}\n"
-          f"🔹 **RW:** {rw_str}\n"
-          f"🔹 **CM:** {cm_str}\n"
-          f"🛡️ **GK:** {gk_str}"
-      ),
-      inline=False,
+  await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(
+    name="rank", description="Cria e exibe o Ranking Top 10 do Blue Lock Rivals"
+)
+@app_commands.describe(
+    top1="Jogador em 1º lugar",
+    top2="Jogador em 2º lugar",
+    top3="Jogador em 3º lugar",
+    top4="Jogador em 4º lugar",
+    top5="Jogador em 5º lugar",
+    top6="Jogador em 6º lugar",
+    top7="Jogador em 7º lugar",
+    top8="Jogador em 8º lugar",
+    top9="Jogador em 9º lugar",
+    top10="Jogador em 10º lugar",
+)
+async def rank(
+    interaction: discord.Interaction,
+    top1: discord.Member = None,
+    top2: discord.Member = None,
+    top3: discord.Member = None,
+    top4: discord.Member = None,
+    top5: discord.Member = None,
+    top6: discord.Member = None,
+    top7: discord.Member = None,
+    top8: discord.Member = None,
+    top9: discord.Member = None,
+    top10: discord.Member = None,
+):
+  posicoes = [
+      ("👑 1º Lugar", top1),
+      ("🥈 2º Lugar", top2),
+      ("🥉 3º Lugar", top3),
+      ("4º Lugar", top4),
+      ("5º Lugar", top5),
+      ("6º Lugar", top6),
+      ("7º Lugar", top7),
+      ("8º Lugar", top8),
+      ("9º Lugar", top9),
+      ("10º Lugar", top10),
+  ]
+
+  descricao = ""
+  for label, membro in posicoes:
+    mencao = membro.mention if membro else "*(Vago)*"
+    descricao += f"**{label}:** {mencao}\n"
+
+  embed = discord.Embed(
+      title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
+      description=descricao,
+      color=discord.Color.from_rgb(255, 215, 0),
+  )
+  embed.set_footer(
+      text=f"Ranking atualizado por {interaction.user.display_name}"
   )
 
   await interaction.response.send_message(embed=embed)
@@ -287,9 +334,8 @@ async def x1(interaction: discord.Interaction, adversario: discord.Member):
   embed = discord.Embed(
       title="👀 NOVO DESAFIO DE X1",
       description=(
-          f"{adversario.mention}, foste desafiado para um duelo por"
-          f" {interaction.user.mention} no Blue Lock Rivals!\n\nClica num dos"
-          " botões abaixo para responder."
+          f"{adversario.mention}, foste desafiado por {interaction.user.mention}"
+          " para um X1 no Blue Lock Rivals!"
       ),
       color=discord.Color.from_rgb(255, 140, 0),
   )
