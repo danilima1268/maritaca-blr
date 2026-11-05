@@ -44,7 +44,7 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. Painel de Escalação com o formato original
+# 3. Painel de Escalação (Modo Livre por Botões)
 class EscalacaoView(discord.ui.View):
 
   def __init__(self):
@@ -61,11 +61,11 @@ class EscalacaoView(discord.ui.View):
     return (
         "⚽ **ESCALAÇÃO - BLUE LOCK RIVALS** ⚽\n\n"
         "Clique no botão correspondente para garantir a sua posição:\n\n"
-        f"🔸 **CF**: {self.vagas['CF']}\n"
-        f"🔸 **LW**: {self.vagas['LW']}\n"
-        f"🔸 **RW**: {self.vagas['RW']}\n"
-        f"🔸 **CM**: {self.vagas['CM']}\n"
-        f"🔸 **GK**: {self.vagas['GK']}"
+        f"🔹 **CF**: {self.vagas['CF']}\n"
+        f"🔹 **LW**: {self.vagas['LW']}\n"
+        f"🔹 **RW**: {self.vagas['RW']}\n"
+        f"🔹 **CM**: {self.vagas['CM']}\n"
+        f"🔹 **GK**: {self.vagas['GK']}"
     )
 
   async def ocupar_vaga(
@@ -78,7 +78,6 @@ class EscalacaoView(discord.ui.View):
           content=self.gerar_mensagem(), view=self
       )
     else:
-      # Se já estiver ocupado, permite retirar ou avisa
       if self.vagas[posicao] == user_nome:
         self.vagas[posicao] = "Vaga Disponível"
         await interaction.response.edit_message(
@@ -131,7 +130,7 @@ class EscalacaoView(discord.ui.View):
     await self.ocupar_vaga(interaction, "GK")
 
 
-# 4. Comandos de Barra
+# 4. Comandos de Barra (Slash Commands)
 @bot.tree.command(
     name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
 )
@@ -142,13 +141,40 @@ async def escalacao(interaction: discord.Interaction):
 
 @bot.tree.command(
     name="moldar_escalacao",
-    description="Modifica ou molda a tática da tua equipa",
+    description="Define manualmente os jogadores para cada posição da equipa",
 )
-@app_commands.describe(tatica="Ex: 4-3-3, 3-2-1, etc.")
-async def moldar_escalacao(interaction: discord.Interaction, tatica: str):
-  await interaction.response.send_message(
-      f"📋 Tática moldada com sucesso para: **{tatica}**!"
+@app_commands.describe(
+    cf="Jogador para a posição CF (Avançado Centro)",
+    lw="Jogador para a posição LW (Ponta Esquerda)",
+    rw="Jogador para a posição RW (Ponta Direita)",
+    cm="Jogador para a posição CM (Médio Centro)",
+    gk="Jogador para a posição GK (Guarda-Redes)",
+)
+async def moldar_escalacao(
+    interaction: discord.Interaction,
+    cf: discord.Member = None,
+    lw: discord.Member = None,
+    rw: discord.Member = None,
+    cm: discord.Member = None,
+    gk: discord.Member = None,
+):
+  cf_str = cf.mention if cf else "Vaga Disponível"
+  lw_str = lw.mention if lw else "Vaga Disponível"
+  rw_str = rw.mention if rw else "Vaga Disponível"
+  cm_str = cm.mention if cm else "Vaga Disponível"
+  gk_str = gk.mention if gk else "Vaga Disponível"
+
+  mensagem = (
+      "⚽ **ESCALAÇÃO MOLDADA - BLUE LOCK RIVALS** ⚽\n\n"
+      f"🔸 **CF**: {cf_str}\n"
+      f"🔸 **LW**: {lw_str}\n"
+      f"🔸 **RW**: {rw_str}\n"
+      f"🔸 **CM**: {cm_str}\n"
+      f"🔸 **GK**: {gk_str}\n\n"
+      f"Escalação definida por: {interaction.user.mention}"
   )
+
+  await interaction.response.send_message(mensagem)
 
 
 @bot.tree.command(
