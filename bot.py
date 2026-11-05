@@ -1,61 +1,20 @@
-import os
-from threading import Thread
-from flask import Flask
-import discord
-from discord import app_commands
-from discord.ext import commands
-
-# 1. Servidor web Flask para o Render manter a porta aberta 24/7
-app = Flask("")
+# Vamos guardar a referência do último painel de escalação ativo globalmente no bot
+ultimo_painel = None
 
 
-@app.route("/")
-def home():
-  return "Bot online e a funcionar!"
-
-
-def run():
-  port = int(os.environ.get("PORT", 8080))
-  app.run(host="0.0.0.0", port=port)
-
-
-def keep_alive():
-  t = Thread(target=run)
-  t.daemon = True
-  t.start()
-
-
-# 2. Configuração do Bot e Intents
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.presences = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-
-@bot.event
-async def on_ready():
-  print(f"Bot ligado com sucesso como {bot.user}")
-  try:
-    synced = await bot.tree.sync()
-    print(f"Sincronizados {len(synced)} comandos de barra com sucesso.")
-  except Exception as e:
-    print(f"Erro ao sincronizar comandos: {e}")
-
-
-# 3. View do Painel de Escalação
 class EscalacaoView(discord.ui.View):
 
-  def __init__(self):
+  def __init__(
+      self,
+      cf="Vaga Disponível",
+      lw="Vaga Disponível",
+      rw="Vaga Disponível",
+      cm="Vaga Disponível",
+      gk="Vaga Disponível",
+  ):
     super().__init__(timeout=None)
-    self.vagas = {
-        "CF": "Vaga Disponível",
-        "LW": "Vaga Disponível",
-        "RW": "Vaga Disponível",
-        "CM": "Vaga Disponível",
-        "GK": "Vaga Disponível",
-    }
+    self.vagas = {"CF": cf, "LW": lw, "RW": rw, "CM": cm, "GK": gk}
+    self.mensagem_referencia = None
 
   def gerar_mensagem(self):
     return (
@@ -73,24 +32,17 @@ class EscalacaoView(discord.ui.View):
   ):
     user_nome = interaction.user.display_name
 
-    # Verifica se o utilizador já está noutra posição. Se estiver, remove-o de lá primeiro para permitir a troca.
+    # Remove o utilizador de outra posição se já estiver nalguma
     for pos, ocupante in self.vagas.items():
       if ocupante == user_nome:
         self.vagas[pos] = "Vaga Disponível"
 
-    # Se a posição escolhida já estava ocupada por outra pessoa (e não era ele próprio)
-    if self.vagas[posicao] != "Vaga Disponível" and self.vagas[posicao] != user_nome:
-      # Como limpamos o user acima se ele já estivesse noutra, reatribuímos caso ele estivesse exatamente nesta (o que aciona o cancelamento)
-      pass
-
-    # Lógica de Ocupar / Cancelar
     if self.vagas[posicao] == "Vaga Disponível":
       self.vagas[posicao] = user_nome
       await interaction.response.edit_message(
           content=self.gerar_mensagem(), view=self
       )
     elif self.vagas[posicao] == user_nome:
-      # Clicou na mesma posição onde já estava -> Cancela / Liberta a vaga
       self.vagas[posicao] = "Vaga Disponível"
       await interaction.response.edit_message(
           content=self.gerar_mensagem(), view=self
@@ -142,20 +94,66 @@ class EscalacaoView(discord.ui.View):
     await self.processar_clique(interaction, "GK")
 
 
-# 4. Comando /escalacao
+# Comando /escalacao atualizado para guardar a referência global
 @bot.tree.command(
     name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
 )
 async def escalacao(interaction: discord.Interaction):
+  global ultimo_painel
   view = EscalacaoView()
   await interaction.response.send_message(view.gerar_mensagem(), view=view)
+  ultimo_painel = await interaction.original_response()
 
 
-# 5. Arranque do Bot
-if __name__ == "__main__":
-  keep_alive()
-  token = os.getenv("DISCORD_TOKEN")
-  if token:
-    bot.run(token)
-  else:
-    print("Erro: A variável de ambiente DISCORD_TOKEN não está definida!")
+# Novo comando /moldar_escalacao para definir os jogadores manualmente
+@bot.tree.command(
+    name="moldar_escalacao",
+    description="Molda a escalação definindo os jogadores para cada posição",
+)
+@app_commands.describe(
+    cf="Jogador para a posição CF",
+    lw="Jogador para a posição LW",
+    rw="Jogador para a posição RW",
+    cm="Jogador para a posição CM",
+    gk="Jogador para a posição GK",
+)
+async def moldar_escalacao(
+    interaction: discord.Interaction,
+    cf: discord.Member = None,
+    lw: discord.Member = None,
+    rw: discord.Member = None,
+    cm: discord.Member = None,
+    gk: discord.Member = None,
+):
+  global ultimo_painel
+
+  # Converte os membros mencionados para o nome de exibição (ou mantém "Vaga Disponível")
+  cf_str = cf.display_name if cf else "Vaga Disponível"
+  lw_str = lw.display_name if lw else "Vaga Disponível"
+  rw_str = rw.display_name if rw else "Vaga Disponível"
+  cm_str = cm.display_name if cm else "Vaga Disponível"
+  gk_str = gk.display_name if gk else "Vaga Disponível"
+
+  nova_view = EscalacaoView(
+      cf=cf_str, lw=lw_str, rw=rw_str, cm=cm_str, gk=gk_str
+  )
+
+  # Se já existir um painel criado anteriormente, edita-o diretamente!
+  if ultimo_painel:
+    try:
+      await ultimo_painel.edit(
+          content=nova_view.gerar_mensagem(), view=nova_view
+      )
+      await interaction.response.send_message(
+          "✅ Escalação moldada e atualizada com sucesso no painel principal!",
+          ephemeral=True,
+      )
+      return
+    except discord.HTTPException:
+      pass  # Se a mensagem antiga tiver sido apagada, cria uma nova abaixo
+
+  # Caso contrário, envia um novo painel moldado
+  await interaction.response.send_message(
+      nova_view.gerar_mensagem(), view=nova_view
+  )
+  ultimo_painel = await interaction.original_response()
