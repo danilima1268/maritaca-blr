@@ -102,4 +102,5 @@ async def x1(interaction: discord.Interaction, oponente: discord.Member):
     await interaction.response.send_message(content=oponente.mention, embed=embed, view=view)
 
 # Substitui pelo teu token ou usa variável de ambiente
-bot.run("O_TEU_TOKEN_AQUI")
+import os
+bot.run(os.getenv("DISCORD_TOKEN"))
