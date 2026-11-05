@@ -44,18 +44,19 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. Painel de Escalação (Visual clássico em texto simples + Anti-Roubo)
+# 3. Painel de Escalação (Com suporte a moldar posições iniciais + Anti-Roubo)
 class EscalacaoView(discord.ui.View):
 
-  def __init__(self):
+  def __init__(
+      self,
+      cf="Vaga Disponível",
+      lw="Vaga Disponível",
+      rw="Vaga Disponível",
+      cm="Vaga Disponível",
+      gk="Vaga Disponível",
+  ):
     super().__init__(timeout=None)
-    self.vagas = {
-        "CF": "Vaga Disponível",
-        "LW": "Vaga Disponível",
-        "RW": "Vaga Disponível",
-        "CM": "Vaga Disponível",
-        "GK": "Vaga Disponível",
-    }
+    self.vagas = {"CF": cf, "LW": lw, "RW": rw, "CM": cm, "GK": gk}
 
   def gerar_mensagem(self):
     return (
@@ -205,7 +206,9 @@ async def escalacao(interaction: discord.Interaction):
 
 @bot.tree.command(
     name="moldar_escalacao",
-    description="Define manualmente os jogadores para cada posição da equipa",
+    description=(
+        "Cria um novo painel interativo moldado com jogadores específicos"
+    ),
 )
 @app_commands.describe(
     cf="Jogador para a posição CF",
@@ -222,22 +225,16 @@ async def moldar_escalacao(
     cm: discord.Member = None,
     gk: discord.Member = None,
 ):
-  cf_str = cf.mention if cf else "Vaga Disponível"
-  lw_str = lw.mention if lw else "Vaga Disponível"
-  rw_str = rw.mention if rw else "Vaga Disponível"
-  cm_str = cm.mention if cm else "Vaga Disponível"
-  gk_str = gk.mention if gk else "Vaga Disponível"
+  cf_str = cf.display_name if cf else "Vaga Disponível"
+  lw_str = lw.display_name if lw else "Vaga Disponível"
+  rw_str = rw.display_name if rw else "Vaga Disponível"
+  cm_str = cm.display_name if cm else "Vaga Disponível"
+  gk_str = gk.display_name if gk else "Vaga Disponível"
 
-  mensagem = (
-      "⚽ **ESCALAÇÃO MOLDADA - BLUE LOCK RIVALS** ⚽\n\n"
-      f"🔸 **CF**: {cf_str}\n"
-      f"🔸 **LW**: {lw_str}\n"
-      f"🔸 **RW**: {rw_str}\n"
-      f"🔸 **CM**: {cm_str}\n"
-      f"🔸 **GK**: {gk_str}\n\n"
-      f"Escalação definida por: {interaction.user.mention}"
+  view = EscalacaoView(
+      cf=cf_str, lw=lw_str, rw=rw_str, cm=cm_str, gk=gk_str
   )
-  await interaction.response.send_message(mensagem)
+  await interaction.response.send_message(view.gerar_mensagem(), view=view)
 
 
 @bot.tree.command(
