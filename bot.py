@@ -138,7 +138,7 @@ class EscalacaoView(discord.ui.View):
     await self.processar_clique(interaction, "GK")
 
 
-# 4. Comandos de Barra
+# 4. Comandos de Barra (Slash Commands)
 @bot.tree.command(
     name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
 )
@@ -201,23 +201,6 @@ async def moldar_escalacao(
   ultimo_painel = await interaction.original_response()
 
 
-@bot.tree.command(name="ping", description="Verifica o estado do bot")
-async def ping(interaction: discord.Interaction):
-  await interaction.response.send_message("Pong! ⚽ Bot operacional.")
-
-
-# 5. Arranque do Bot
-if __name__ == "__main__":
-  keep_alive()
-  token = os.getenv("DISCORD_TOKEN")
-  if token:
-    bot.run(token)
-  else:
-    print("Erro: A variável de ambiente DISCORD_TOKEN não está definida!")
-    import discord
-from discord import app_commands
-
-
 @bot.tree.command(
     name="rank", description="Cria e exibe o Ranking Top 10 do Blue Lock Rivals"
 )
@@ -274,3 +257,18 @@ async def rank(
   )
 
   await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="ping", description="Verifica o estado do bot")
+async def ping(interaction: discord.Interaction):
+  await interaction.response.send_message("Pong! ⚽ Bot operacional.")
+
+
+# 5. Arranque do Bot
+if __name__ == "__main__":
+  keep_alive()
+  token = os.getenv("DISCORD_TOKEN")
+  if token:
+    bot.run(token)
+  else:
+    print("Erro: A variável de ambiente DISCORD_TOKEN não está definida!")
