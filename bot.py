@@ -146,7 +146,7 @@ class EscalacaoView(discord.ui.View):
     await self.ocupar_vaga(interaction, "GK")
 
 
-# 4. View Interativa para o X1 (Com Embed Estético)
+# 4. View Interativa para o X1
 class X1View(discord.ui.View):
 
   def __init__(self, desafiante: discord.Member, adversario: discord.Member):
@@ -261,6 +261,65 @@ async def moldar_escalacao(
           f"🛡️ **GK:** {gk_str}"
       ),
       inline=False,
+  )
+
+  await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(
+    name="rank", description="Cria e exibe o Ranking Top 10 do Blue Lock Rivals"
+)
+@app_commands.describe(
+    top1="Jogador em 1º lugar",
+    top2="Jogador em 2º lugar",
+    top3="Jogador em 3º lugar",
+    top4="Jogador em 4º lugar",
+    top5="Jogador em 5º lugar",
+    top6="Jogador em 6º lugar",
+    top7="Jogador em 7º lugar",
+    top8="Jogador em 8º lugar",
+    top9="Jogador em 9º lugar",
+    top10="Jogador em 10º lugar",
+)
+async def rank(
+    interaction: discord.Interaction,
+    top1: discord.Member = None,
+    top2: discord.Member = None,
+    top3: discord.Member = None,
+    top4: discord.Member = None,
+    top5: discord.Member = None,
+    top6: discord.Member = None,
+    top7: discord.Member = None,
+    top8: discord.Member = None,
+    top9: discord.Member = None,
+    top10: discord.Member = None,
+):
+  # Lista com os emojis e dados do ranking
+  posicoes = [
+      ("👑 1º Lugar", top1),
+      ("🥈 2º Lugar", top2),
+      ("🥉 3º Lugar", top3),
+      ("4º Lugar", top4),
+      ("5º Lugar", top5),
+      ("6º Lugar", top6),
+      ("7º Lugar", top7),
+      ("8º Lugar", top8),
+      ("9º Lugar", top9),
+      ("10º Lugar", top10),
+  ]
+
+  descricao = ""
+  for label, membro in posicoes:
+    mencao = membro.mention if membro else "*(Vago)*"
+    descricao += f"**{label}:** {mencao}\n"
+
+  embed = discord.Embed(
+      title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
+      description=descricao,
+      color=discord.Color.from_rgb(255, 215, 0),  # Dourado
+  )
+  embed.set_footer(
+      text=f"Ranking atualizado por {interaction.user.display_name}"
   )
 
   await interaction.response.send_message(embed=embed)
