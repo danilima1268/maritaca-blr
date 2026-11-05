@@ -44,7 +44,7 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. Painel de Escalação (Modo Livre por Botões)
+# 3. Painel de Escalação (Com Embed Estético)
 class EscalacaoView(discord.ui.View):
 
   def __init__(self):
@@ -57,16 +57,32 @@ class EscalacaoView(discord.ui.View):
         "GK": "Vaga Disponível",
     }
 
-  def gerar_mensagem(self):
-    return (
-        "⚽ **ESCALAÇÃO - BLUE LOCK RIVALS** ⚽\n\n"
-        "Clique no botão correspondente para garantir a sua posição:\n\n"
-        f"🔸 **CF**: {self.vagas['CF']}\n"
-        f"🔸 **LW**: {self.vagas['LW']}\n"
-        f"🔸 **RW**: {self.vagas['RW']}\n"
-        f"🔸 **CM**: {self.vagas['CM']}\n"
-        f"🔸 **GK**: {self.vagas['GK']}"
+  def gerar_embed(self):
+    embed = discord.Embed(
+        title="⚽ PAINEL DE ESCALAÇÃO — BLUE LOCK RIVALS",
+        description=(
+            "Clica nos botões abaixo para garantir a tua posição no time titular!"
+            " Podes clicar novamente para sair da vaga."
+        ),
+        color=discord.Color.from_rgb(0, 162, 255),
     )
+    embed.add_field(
+        name="Posições Ofensivas & Meio-Campo",
+        value=(
+            f"🔸 **CF (Avançado):** {self.vagas['CF']}\n"
+            f"🔹 **LW (Ponta Esq.):** {self.vagas['LW']}\n"
+            f"🔹 **RW (Ponta Dir.):** {self.vagas['RW']}\n"
+            f"🔹 **CM (Médio Centro):** {self.vagas['CM']}"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Defesa",
+        value=f"🛡️ **GK (Guarda-Redes):** {self.vagas['GK']}",
+        inline=False,
+    )
+    embed.set_footer(text="Blue Lock Rivals • Sistema Oficial de Escalação")
+    return embed
 
   async def ocupar_vaga(
       self, interaction: discord.Interaction, posicao: str
@@ -75,13 +91,13 @@ class EscalacaoView(discord.ui.View):
     if self.vagas[posicao] == "Vaga Disponível":
       self.vagas[posicao] = user_nome
       await interaction.response.edit_message(
-          content=self.gerar_mensagem(), view=self
+          embed=self.gerar_embed(), view=self
       )
     else:
       if self.vagas[posicao] == user_nome:
         self.vagas[posicao] = "Vaga Disponível"
         await interaction.response.edit_message(
-            content=self.gerar_mensagem(), view=self
+            embed=self.gerar_embed(), view=self
         )
       else:
         await interaction.response.send_message(
@@ -130,7 +146,7 @@ class EscalacaoView(discord.ui.View):
     await self.ocupar_vaga(interaction, "GK")
 
 
-# 4. View Interativa para o X1 (Com validação de adversário)
+# 4. View Interativa para o X1 (Com Embed Estético)
 class X1View(discord.ui.View):
 
   def __init__(self, desafiante: discord.Member, adversario: discord.Member):
@@ -139,7 +155,7 @@ class X1View(discord.ui.View):
     self.adversario = adversario
 
   @discord.ui.button(
-      label="Aceitar", style=discord.ButtonStyle.green, emoji="✅"
+      label="Aceitar Desafio", style=discord.ButtonStyle.green, emoji="✅"
   )
   async def aceitar(
       self, interaction: discord.Interaction, button: discord.ui.Button
@@ -154,17 +170,21 @@ class X1View(discord.ui.View):
     for child in self.children:
       child.disabled = True
 
-    await interaction.response.edit_message(
-        content=(
-            f"⚔️ O X1 entre {self.desafiante.mention} e"
-            f" {self.adversario.mention} foi **ACEITE**! Que vença o melhor! ⚽"
+    embed = discord.Embed(
+        title="⚔️ X1 ACEITE — BLUE LOCK RIVALS",
+        description=(
+            f"O duelo épico entre {self.desafiante.mention} e"
+            f" {self.adversario.mention} foi **CONFIRMADO**! ⚽🔥"
         ),
-        view=self,
+        color=discord.Color.green(),
     )
+    embed.set_footer(text="Que vença o melhor egoísta!")
+
+    await interaction.response.edit_message(embed=embed, view=self)
     self.stop()
 
   @discord.ui.button(
-      label="Rejeitar", style=discord.ButtonStyle.red, emoji="✖️"
+      label="Recusar", style=discord.ButtonStyle.red, emoji="✖️"
   )
   async def rejeitar(
       self, interaction: discord.Interaction, button: discord.ui.Button
@@ -179,13 +199,16 @@ class X1View(discord.ui.View):
     for child in self.children:
       child.disabled = True
 
-    await interaction.response.edit_message(
-        content=(
-            f"❌ {self.adversario.mention} recusou o desafio de X1 de"
+    embed = discord.Embed(
+        title="❌ DESAFIO RECUSADO",
+        description=(
+            f"{self.adversario.mention} recusou o desafio de X1 de"
             f" {self.desafiante.mention}."
         ),
-        view=self,
+        color=discord.Color.red(),
     )
+
+    await interaction.response.edit_message(embed=embed, view=self)
     self.stop()
 
 
@@ -195,7 +218,7 @@ class X1View(discord.ui.View):
 )
 async def escalacao(interaction: discord.Interaction):
   view = EscalacaoView()
-  await interaction.response.send_message(view.gerar_mensagem(), view=view)
+  await interaction.response.send_message(embed=view.gerar_embed(), view=view)
 
 
 @bot.tree.command(
@@ -223,16 +246,24 @@ async def moldar_escalacao(
   cm_str = cm.mention if cm else "Vaga Disponível"
   gk_str = gk.mention if gk else "Vaga Disponível"
 
-  mensagem = (
-      "⚽ **ESCALAÇÃO MOLDADA - BLUE LOCK RIVALS** ⚽\n\n"
-      f"🔸 **CF**: {cf_str}\n"
-      f"🔸 **LW**: {lw_str}\n"
-      f"🔸 **RW**: {rw_str}\n"
-      f"🔸 **CM**: {cm_str}\n"
-      f"🔸 **GK**: {gk_str}\n\n"
-      f"Escalação definida por: {interaction.user.mention}"
+  embed = discord.Embed(
+      title="📋 TÁTICA MOLDADA — BLUE LOCK RIVALS",
+      description=f"Escalação definida por {interaction.user.mention}",
+      color=discord.Color.gold(),
   )
-  await interaction.response.send_message(mensagem)
+  embed.add_field(
+      name="Posições",
+      value=(
+          f"🔸 **CF:** {cf_str}\n"
+          f"🔹 **LW:** {lw_str}\n"
+          f"🔹 **RW:** {rw_str}\n"
+          f"🔹 **CM:** {cm_str}\n"
+          f"🛡️ **GK:** {gk_str}"
+      ),
+      inline=False,
+  )
+
+  await interaction.response.send_message(embed=embed)
 
 
 @bot.tree.command(
@@ -253,10 +284,18 @@ async def x1(interaction: discord.Interaction, adversario: discord.Member):
     return
 
   view = X1View(interaction.user, adversario)
+  embed = discord.Embed(
+      title="👀 NOVO DESAFIO DE X1",
+      description=(
+          f"{adversario.mention}, foste desafiado para um duelo por"
+          f" {interaction.user.mention} no Blue Lock Rivals!\n\nClica num dos"
+          " botões abaixo para responder."
+      ),
+      color=discord.Color.from_rgb(255, 140, 0),
+  )
+
   await interaction.response.send_message(
-      f"👀 {adversario.mention}, foste desafiado por {interaction.user.mention}"
-      " para um X1 no Blue Lock Rivals!",
-      view=view,
+      content=adversario.mention, embed=embed, view=view
   )
 
 
