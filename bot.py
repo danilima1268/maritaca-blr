@@ -61,11 +61,11 @@ class EscalacaoView(discord.ui.View):
     return (
         "⚽ **ESCALAÇÃO - BLUE LOCK RIVALS** ⚽\n\n"
         "Clique no botão correspondente para garantir a sua posição:\n\n"
-        f"🔹 **CF**: {self.vagas['CF']}\n"
-        f"🔹 **LW**: {self.vagas['LW']}\n"
-        f"🔹 **RW**: {self.vagas['RW']}\n"
-        f"🔹 **CM**: {self.vagas['CM']}\n"
-        f"🔹 **GK**: {self.vagas['GK']}"
+        f"🔸 **CF**: {self.vagas['CF']}\n"
+        f"🔸 **LW**: {self.vagas['LW']}\n"
+        f"🔸 **RW**: {self.vagas['RW']}\n"
+        f"🔸 **CM**: {self.vagas['CM']}\n"
+        f"🔸 **GK**: {self.vagas['GK']}"
     )
 
   async def ocupar_vaga(
@@ -130,7 +130,66 @@ class EscalacaoView(discord.ui.View):
     await self.ocupar_vaga(interaction, "GK")
 
 
-# 4. Comandos de Barra (Slash Commands)
+# 4. View Interativa para o X1 (Com validação de adversário)
+class X1View(discord.ui.View):
+
+  def __init__(self, desafiante: discord.Member, adversario: discord.Member):
+    super().__init__(timeout=60)
+    self.desafiante = desafiante
+    self.adversario = adversario
+
+  @discord.ui.button(
+      label="Aceitar", style=discord.ButtonStyle.green, emoji="✅"
+  )
+  async def aceitar(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    if interaction.user.id != self.adversario.id:
+      await interaction.response.send_message(
+          "Apenas o jogador desafiado pode responder a este convite!",
+          ephemeral=True,
+      )
+      return
+
+    for child in self.children:
+      child.disabled = True
+
+    await interaction.response.edit_message(
+        content=(
+            f"⚔️ O X1 entre {self.desafiante.mention} e"
+            f" {self.adversario.mention} foi **ACEITE**! Que vença o melhor! ⚽"
+        ),
+        view=self,
+    )
+    self.stop()
+
+  @discord.ui.button(
+      label="Rejeitar", style=discord.ButtonStyle.red, emoji="✖️"
+  )
+  async def rejeitar(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    if interaction.user.id != self.adversario.id:
+      await interaction.response.send_message(
+          "Apenas o jogador desafiado pode responder a este convite!",
+          ephemeral=True,
+      )
+      return
+
+    for child in self.children:
+      child.disabled = True
+
+    await interaction.response.edit_message(
+        content=(
+            f"❌ {self.adversario.mention} recusou o desafio de X1 de"
+            f" {self.desafiante.mention}."
+        ),
+        view=self,
+    )
+    self.stop()
+
+
+# 5. Comandos de Barra (Slash Commands)
 @bot.tree.command(
     name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
 )
@@ -144,11 +203,11 @@ async def escalacao(interaction: discord.Interaction):
     description="Define manualmente os jogadores para cada posição da equipa",
 )
 @app_commands.describe(
-    cf="Jogador para a posição CF (Avançado Centro)",
-    lw="Jogador para a posição LW (Ponta Esquerda)",
-    rw="Jogador para a posição RW (Ponta Direita)",
-    cm="Jogador para a posição CM (Médio Centro)",
-    gk="Jogador para a posição GK (Guarda-Redes)",
+    cf="Jogador para a posição CF",
+    lw="Jogador para a posição LW",
+    rw="Jogador para a posição RW",
+    cm="Jogador para a posição CM",
+    gk="Jogador para a posição GK",
 )
 async def moldar_escalacao(
     interaction: discord.Interaction,
@@ -173,7 +232,6 @@ async def moldar_escalacao(
       f"🔸 **GK**: {gk_str}\n\n"
       f"Escalação definida por: {interaction.user.mention}"
   )
-
   await interaction.response.send_message(mensagem)
 
 
@@ -182,8 +240,23 @@ async def moldar_escalacao(
 )
 @app_commands.describe(adversario="Menciona o jogador para o X1")
 async def x1(interaction: discord.Interaction, adversario: discord.Member):
+  if adversario.id == interaction.user.id:
+    await interaction.response.send_message(
+        "Não podes desafiar-te a ti próprio para um X1!", ephemeral=True
+    )
+    return
+
+  if adversario.bot:
+    await interaction.response.send_message(
+        "Não podes desafiar um bot para um X1!", ephemeral=True
+    )
+    return
+
+  view = X1View(interaction.user, adversario)
   await interaction.response.send_message(
-      f"⚔️ {interaction.user.mention} desafiou {adversario.mention} para um **X1** no Blue Lock Rivals!"
+      f"👀 {adversario.mention}, foste desafiado por {interaction.user.mention}"
+      " para um X1 no Blue Lock Rivals!",
+      view=view,
   )
 
 
@@ -192,7 +265,7 @@ async def ping(interaction: discord.Interaction):
   await interaction.response.send_message("Pong! ⚽ Bot operacional.")
 
 
-# 5. Arranque
+# 6. Arranque
 if __name__ == "__main__":
   keep_alive()
   token = os.getenv("DISCORD_TOKEN")
