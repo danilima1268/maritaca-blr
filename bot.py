@@ -44,7 +44,7 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. Painel de Escalação (Estilo antigo com proteção anti-roubo)
+# 3. Painel de Escalação (Visual clássico em texto simples + Anti-Roubo)
 class EscalacaoView(discord.ui.View):
 
   def __init__(self):
@@ -57,45 +57,34 @@ class EscalacaoView(discord.ui.View):
         "GK": "Vaga Disponível",
     }
 
-  def gerar_embed(self):
-    embed = discord.Embed(
-        title="⚽ ESCALAÇÃO — BLUE LOCK RIVALS",
-        description="Clique no botão correspondente para garantir a sua posição:",
-        color=discord.Color.from_rgb(0, 162, 255),
+  def gerar_mensagem(self):
+    return (
+        "⚽ **ESCALAÇÃO - BLUE LOCK RIVALS** ⚽\n\n"
+        "Clique no botão correspondente para garantir a sua posição:\n\n"
+        f"🔸 **CF**: {self.vagas['CF']}\n"
+        f"🔸 **LW**: {self.vagas['LW']}\n"
+        f"🔸 **RW**: {self.vagas['RW']}\n"
+        f"🔸 **CM**: {self.vagas['CM']}\n"
+        f"🔸 **GK**: {self.vagas['GK']}"
     )
-    embed.add_field(
-        name="",
-        value=(
-            f"🔹 **CF**: {self.vagas['CF']}\n"
-            f"🔹 **LW**: {self.vagas['LW']}\n"
-            f"🔹 **RW**: {self.vagas['RW']}\n"
-            f"🔹 **CM**: {self.vagas['CM']}\n"
-            f"🔹 **GK**: {self.vagas['GK']}"
-        ),
-        inline=False,
-    )
-    return embed
 
   async def ocupar_vaga(
       self, interaction: discord.Interaction, posicao: str
   ):
     user_nome = interaction.user.display_name
 
-    # Se a vaga estiver livre, o utilizador ocupa-a
     if self.vagas[posicao] == "Vaga Disponível":
       self.vagas[posicao] = user_nome
       await interaction.response.edit_message(
-          embed=self.gerar_embed(), view=self
+          content=self.gerar_mensagem(), view=self
       )
     else:
-      # Se o próprio utilizador já estiver na vaga, ele sai (liberta a vaga)
       if self.vagas[posicao] == user_nome:
         self.vagas[posicao] = "Vaga Disponível"
         await interaction.response.edit_message(
-            embed=self.gerar_embed(), view=self
+            content=self.gerar_mensagem(), view=self
         )
       else:
-        # Se estiver ocupado por outra pessoa, bloqueia e avisa
         await interaction.response.send_message(
             f"Esta posição já está ocupada por {self.vagas[posicao]}!",
             ephemeral=True,
@@ -211,7 +200,7 @@ class X1View(discord.ui.View):
 )
 async def escalacao(interaction: discord.Interaction):
   view = EscalacaoView()
-  await interaction.response.send_message(embed=view.gerar_embed(), view=view)
+  await interaction.response.send_message(view.gerar_mensagem(), view=view)
 
 
 @bot.tree.command(
@@ -239,20 +228,16 @@ async def moldar_escalacao(
   cm_str = cm.mention if cm else "Vaga Disponível"
   gk_str = gk.mention if gk else "Vaga Disponível"
 
-  embed = discord.Embed(
-      title="⚽ ESCALAÇÃO MOLDADA — BLUE LOCK RIVALS",
-      description=(
-          "Clique no botão correspondente para garantir a sua posição:\n\n"
-          f"🔹 **CF**: {cf_str}\n"
-          f"🔹 **LW**: {lw_str}\n"
-          f"🔹 **RW**: {rw_str}\n"
-          f"🔹 **CM**: {cm_str}\n"
-          f"🔹 **GK**: {gk_str}\n\n"
-          f"Escalação definida por: {interaction.user.mention}"
-      ),
-      color=discord.Color.gold(),
+  mensagem = (
+      "⚽ **ESCALAÇÃO MOLDADA - BLUE LOCK RIVALS** ⚽\n\n"
+      f"🔸 **CF**: {cf_str}\n"
+      f"🔸 **LW**: {lw_str}\n"
+      f"🔸 **RW**: {rw_str}\n"
+      f"🔸 **CM**: {cm_str}\n"
+      f"🔸 **GK**: {gk_str}\n\n"
+      f"Escalação definida por: {interaction.user.mention}"
   )
-  await interaction.response.send_message(embed=embed)
+  await interaction.response.send_message(mensagem)
 
 
 @bot.tree.command(
@@ -331,18 +316,12 @@ async def x1(interaction: discord.Interaction, adversario: discord.Member):
     return
 
   view = X1View(interaction.user, adversario)
-  embed = discord.Embed(
-      title="👀 NOVO DESAFIO DE X1",
-      description=(
-          f"{adversario.mention}, foste desafiado por {interaction.user.mention}"
-          " para um X1 no Blue Lock Rivals!"
-      ),
-      color=discord.Color.from_rgb(255, 140, 0),
+  mensagem = (
+      f"👀 {adversario.mention}, foste desafiado por {interaction.user.mention}"
+      " para um X1 no Blue Lock Rivals!"
   )
 
-  await interaction.response.send_message(
-      content=adversario.mention, embed=embed, view=view
-  )
+  await interaction.response.send_message(mensagem, view=view)
 
 
 @bot.tree.command(name="ping", description="Verifica o estado do bot")
