@@ -259,6 +259,30 @@ async def rank(
   await interaction.response.send_message(embed=embed)
 
 
+@bot.tree.command(
+    name="x1", description="Desafia outro jogador para um X1 no Blue Lock Rivals"
+)
+@app_commands.describe(adversario="O jogador que queres desafiar para o X1")
+async def x1(interaction: discord.Interaction, adversario: discord.Member):
+  autor = interaction.user
+
+  if adversario.id == autor.id:
+    await interaction.response.send_message(
+        "Não podes desafiar a ti próprio para um X1!", ephemeral=True
+    )
+    return
+
+  if adversario.bot:
+    await interaction.response.send_message(
+        "Não podes desafiar um bot para um X1!", ephemeral=True
+    )
+    return
+
+  await interaction.response.send_message(
+      f"⚔️ {autor.mention} convidou {adversario.mention} para um x1 👀!"
+  )
+
+
 @bot.tree.command(name="ping", description="Verifica o estado do bot")
 async def ping(interaction: discord.Interaction):
   await interaction.response.send_message("Pong! ⚽ Bot operacional.")
@@ -272,30 +296,3 @@ if __name__ == "__main__":
     bot.run(token)
   else:
     print("Erro: A variável de ambiente DISCORD_TOKEN não está definida!")
-
-# Comando /x1 para desafiar outro utilizador
-@bot.tree.command(
-    name="x1", description="Desafia outro jogador para um X1 no Blue Lock Rivals"
-)
-@app_commands.describe(adversario="O jogador que queres desafiar para o X1")
-async def x1(interaction: discord.Interaction, adversario: discord.Member):
-  autor = interaction.user
-
-  # Impede que o utilizador desafie a si próprio
-  if adversario.id == autor.id:
-    await interaction.response.send_message(
-        "Não podes desafiar a ti próprio para um X1!", ephemeral=True
-    )
-    return
-
-  # Impede que desafie o próprio bot
-  if adversario.bot:
-    await interaction.response.send_message(
-        "Não podes desafiar um bot para um X1!", ephemeral=True
-    )
-    return
-
-  # Mensagem pública do desafio
-  await interaction.response.send_message(
-      f"⚔️ {autor.mention} convidou {adversario.mention} para um x1 👀!"
-  )
