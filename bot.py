@@ -138,7 +138,66 @@ class EscalacaoView(discord.ui.View):
     await self.processar_clique(interaction, "GK")
 
 
-# 4. Comandos de Barra (Slash Commands)
+# 4. View para o sistema de X1 com restrição de utilizador
+class X1View(discord.ui.View):
+
+  def __init__(self, desafiado_id: int):
+    super().__init__(timeout=180)  # Expira em 3 minutos
+    self.desafiado_id = desafiado_id
+
+  @discord.ui.button(
+      label="Aceitar", style=discord.ButtonStyle.green, custom_id="x1_aceitar"
+  )
+  async def aceitar(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    if interaction.user.id != self.desafiado_id:
+      await interaction.response.send_message(
+          "Apenas o jogador desafiado pode responder a este convite!",
+          ephemeral=True,
+      )
+      return
+
+    # Desativa os botões após aceitar
+    for child in self.children:
+      child.disabled = True
+
+    await interaction.response.edit_message(
+        content=(
+            f"✅ **X1 ACEITE!** {interaction.user.mention} aceitou o desafio!"
+            " Que comece o duelo! ⚔️"
+        ),
+        view=self,
+    )
+    self.stop()
+
+  @discord.ui.button(
+      label="Recusar", style=discord.ButtonStyle.red, custom_id="x1_recusar"
+  )
+  async def recusar(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    if interaction.user.id != self.desafiado_id:
+      await interaction.response.send_message(
+          "Apenas o jogador desafiado pode responder a este convite!",
+          ephemeral=True,
+      )
+      return
+
+    # Desativa os botões após recusar
+    for child in self.children:
+      child.disabled = True
+
+    await interaction.response.edit_message(
+        content=(
+            f"❌ **X1 RECUSADO.** {interaction.user.mention} recusou o desafio."
+        ),
+        view=self,
+    )
+    self.stop()
+
+
+# 5. Comandos de Barra (Slash Commands)
 @bot.tree.command(
     name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
 )
@@ -278,8 +337,10 @@ async def x1(interaction: discord.Interaction, adversario: discord.Member):
     )
     return
 
+  view = X1View(desafiado_id=adversario.id)
   await interaction.response.send_message(
-      f"⚔️ {autor.mention} convidou {adversario.mention} para um x1 👀!"
+      f"⚔️ {autor.mention} convidou {adversario.mention} para um x1 👀!",
+      view=view,
   )
 
 
@@ -288,7 +349,7 @@ async def ping(interaction: discord.Interaction):
   await interaction.response.send_message("Pong! ⚽ Bot operacional.")
 
 
-# 5. Arranque do Bot
+# 6. Arranque do Bot
 if __name__ == "__main__":
   keep_alive()
   token = os.getenv("DISCORD_TOKEN")
