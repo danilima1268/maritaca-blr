@@ -369,6 +369,19 @@ async def escalacao(interaction: discord.Interaction):
     name="moldar_escalacao",
     description="Molda a escalação e atualiza o painel principal diretamente",
 )
-@app_commands.describe(
-    cf="Jogador para a posição CF",
-    lw="Jogador para a posição LW
+async def moldar_escalacao(
+    interaction: discord.Interaction,
+    cf: discord.Member = None,
+    lw: discord.Member = None,
+    rw: discord.Member = None,
+    cm: discord.Member = None,
+    gk: discord.Member = None,
+):
+  global ultimo_painel
+  cf_str = cf.display_name if cf else "Vaga Disponível"
+  lw_str = lw.display_name if lw else "Vaga Disponível"
+  rw_str = rw.display_name if rw else "Vaga Disponível"
+  cm_str = cm.display_name if cm else "Vaga Disponível"
+  gk_str = gk.display_name if gk else "Vaga Disponível"
+
+  nova_
