@@ -33,7 +33,7 @@ intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Variável global para guardar o último painel de escalação criado
+# Variáveis globais para guardar o último painel criado de cada tipo
 ultimo_painel = None
 
 
@@ -47,7 +47,7 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. View do Painel de Escalação
+# 3. View do Painel de Escalação Normal
 class EscalacaoView(discord.ui.View):
 
   def __init__(
@@ -138,11 +138,157 @@ class EscalacaoView(discord.ui.View):
     await self.processar_clique(interaction, "GK")
 
 
-# 4. View para o sistema de X1 com restrição de utilizador
+# 4. View do Painel de Tryout (Time A vs Time B)
+class TryoutView(discord.ui.View):
+
+  def __init__(self):
+    super().__init__(timeout=None)
+    self.time_a = {
+        "CF": "Vaga Disponível",
+        "LW": "Vaga Disponível",
+        "RW": "Vaga Disponível",
+        "CM": "Vaga Disponível",
+        "GK": "Vaga Disponível",
+    }
+    self.time_b = {
+        "CF": "Vaga Disponível",
+        "LW": "Vaga Disponível",
+        "RW": "Vaga Disponível",
+        "CM": "Vaga Disponível",
+        "GK": "Vaga Disponível",
+    }
+
+  def gerar_mensagem(self):
+    return (
+        "⚔️ **TRYOUT / TREINO INTERNO — TIME A vs TIME B** ⚔️\n\n"
+        "**Time A:**\n"
+        f"🔸 **CF:** {self.time_a['CF']}\n"
+        f"🔸 **LW:** {self.time_a['LW']}\n"
+        f"🔸 **RW:** {self.time_a['RW']}\n"
+        f"🔸 **CM:** {self.time_a['CM']}\n"
+        f"🔸 **GK:** {self.time_a['GK']}\n\n"
+        "**Time B:**\n"
+        f"🔸 **CF:** {self.time_b['CF']}\n"
+        f"🔸 **LW:** {self.time_b['LW']}\n"
+        f"🔸 **RW:** {self.time_b['RW']}\n"
+        f"🔸 **CM:** {self.time_b['CM']}\n"
+        f"🔸 **GK:** {self.time_b['GK']}"
+    )
+
+  async def processar_tryout(
+      self, interaction: discord.Interaction, time_alvo: str, posicao: str
+  ):
+    user_nome = interaction.user.display_name
+
+    for pos in self.time_a:
+      if self.time_a[pos] == user_nome:
+        self.time_a[pos] = "Vaga Disponível"
+    for pos in self.time_b:
+      if self.time_b[pos] == user_nome:
+        self.time_b[pos] = "Vaga Disponível"
+
+    alvo_dict = self.time_a if time_alvo == "A" else self.time_b
+
+    if alvo_dict[posicao] == "Vaga Disponível":
+      alvo_dict[posicao] = user_nome
+      await interaction.response.edit_message(
+          content=self.gerar_mensagem(), view=self
+      )
+    else:
+      await interaction.response.send_message(
+          f"Esta posição no Time {time_alvo} já está ocupada por"
+          f" {alvo_dict[posicao]}!",
+          ephemeral=True,
+      )
+
+  # Botões do Time A
+  @discord.ui.button(
+      label="A: CF", style=discord.ButtonStyle.green, custom_id="try_a_cf"
+  )
+  async def a_cf(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "A", "CF")
+
+  @discord.ui.button(
+      label="A: LW", style=discord.ButtonStyle.blurple, custom_id="try_a_lw"
+  )
+  async def a_lw(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "A", "LW")
+
+  @discord.ui.button(
+      label="A: RW", style=discord.ButtonStyle.blurple, custom_id="try_a_rw"
+  )
+  async def a_rw(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "A", "RW")
+
+  @discord.ui.button(
+      label="A: CM", style=discord.ButtonStyle.blurple, custom_id="try_a_cm"
+  )
+  async def a_cm(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "A", "CM")
+
+  @discord.ui.button(
+      label="A: GK", style=discord.ButtonStyle.red, custom_id="try_a_gk"
+  )
+  async def a_gk(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "A", "GK")
+
+  # Botões do Time B
+  @discord.ui.button(
+      label="B: CF", style=discord.ButtonStyle.green, custom_id="try_b_cf"
+  )
+  async def b_cf(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "CF")
+
+  @discord.ui.button(
+      label="B: LW", style=discord.ButtonStyle.blurple, custom_id="try_b_lw"
+  )
+  async def b_lw(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "LW")
+
+  @discord.ui.button(
+      label="B: RW", style=discord.ButtonStyle.blurple, custom_id="try_b_rw"
+  )
+  async def b_rw(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "RW")
+
+  @discord.ui.button(
+      label="B: CM", style=discord.ButtonStyle.blurple, custom_id="try_b_cm"
+  )
+  async def b_cm(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "CM")
+
+  @discord.ui.button(
+      label="B: GK", style=discord.ButtonStyle.red, custom_id="try_b_gk"
+  )
+  async def b_gk(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "GK")
+
+
+# 5. View para o sistema de X1 com restrição de utilizador
 class X1View(discord.ui.View):
 
   def __init__(self, desafiado_id: int):
-    super().__init__(timeout=180)  # Expira em 3 minutos
+    super().__init__(timeout=180)
     self.desafiado_id = desafiado_id
 
   @discord.ui.button(
@@ -158,7 +304,6 @@ class X1View(discord.ui.View):
       )
       return
 
-    # Desativa os botões após aceitar
     for child in self.children:
       child.disabled = True
 
@@ -184,7 +329,6 @@ class X1View(discord.ui.View):
       )
       return
 
-    # Desativa os botões após recusar
     for child in self.children:
       child.disabled = True
 
@@ -197,7 +341,7 @@ class X1View(discord.ui.View):
     self.stop()
 
 
-# 5. Comandos de Barra (Slash Commands)
+# 6. Comandos de Barra (Slash Commands)
 @bot.tree.command(
     name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
 )
@@ -280,80 +424,3 @@ async def rank(
     top1: discord.Member = None,
     top2: discord.Member = None,
     top3: discord.Member = None,
-    top4: discord.Member = None,
-    top5: discord.Member = None,
-    top6: discord.Member = None,
-    top7: discord.Member = None,
-    top8: discord.Member = None,
-    top9: discord.Member = None,
-    top10: discord.Member = None,
-):
-  posicoes = [
-      ("👑 1º Lugar", top1),
-      ("🥈 2º Lugar", top2),
-      ("🥉 3º Lugar", top3),
-      ("4º Lugar", top4),
-      ("5º Lugar", top5),
-      ("6º Lugar", top6),
-      ("7º Lugar", top7),
-      ("8º Lugar", top8),
-      ("9º Lugar", top9),
-      ("10º Lugar", top10),
-  ]
-
-  descricao = ""
-  for label, membro in posicoes:
-    mencao = membro.mention if membro else "*(Vago)*"
-    descricao += f"**{label}:** {mencao}\n"
-
-  embed = discord.Embed(
-      title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
-      description=descricao,
-      color=discord.Color.from_rgb(255, 215, 0),
-  )
-  embed.set_footer(
-      text=f"Ranking atualizado por {interaction.user.display_name}"
-  )
-
-  await interaction.response.send_message(embed=embed)
-
-
-@bot.tree.command(
-    name="x1", description="Desafia outro jogador para um X1 no Blue Lock Rivals"
-)
-@app_commands.describe(adversario="O jogador que queres desafiar para o X1")
-async def x1(interaction: discord.Interaction, adversario: discord.Member):
-  autor = interaction.user
-
-  if adversario.id == autor.id:
-    await interaction.response.send_message(
-        "Não podes desafiar a ti próprio para um X1!", ephemeral=True
-    )
-    return
-
-  if adversario.bot:
-    await interaction.response.send_message(
-        "Não podes desafiar um bot para um X1!", ephemeral=True
-    )
-    return
-
-  view = X1View(desafiado_id=adversario.id)
-  await interaction.response.send_message(
-      f"⚔️ {autor.mention} convidou {adversario.mention} para um x1 👀!",
-      view=view,
-  )
-
-
-@bot.tree.command(name="ping", description="Verifica o estado do bot")
-async def ping(interaction: discord.Interaction):
-  await interaction.response.send_message("Pong! ⚽ Bot operacional.")
-
-
-# 6. Arranque do Bot
-if __name__ == "__main__":
-  keep_alive()
-  token = os.getenv("DISCORD_TOKEN")
-  if token:
-    bot.run(token)
-  else:
-    print("Erro: A variável de ambiente DISCORD_TOKEN não está definida!")
