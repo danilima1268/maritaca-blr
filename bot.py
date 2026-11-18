@@ -33,7 +33,6 @@ intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Variáveis globais para guardar o último painel criado de cada tipo
 ultimo_painel = None
 
 
@@ -384,9 +383,116 @@ async def escalacao(interaction: discord.Interaction):
 
 @bot.tree.command(
     name="moldar_escalacao",
-    description=(
-        "Molda a escalação e atualiza o painel principal diretamente"
-    ),
+    description="Molda a escalação e atualiza o painel principal diretamente",
 )
 @app_commands.describe(
-    cf="Jogador para a posição
+    cf="Jogador para a posição CF",
+    lw="Jogador para a posição LW",
+    rw="Jogador para a posição RW",
+    cm="Jogador para a posição CM",
+    gk="Jogador para a posição GK",
+)
+async def moldar_escalacao(
+    interaction: discord.Interaction,
+    cf: discord.Member = None,
+    lw: discord.Member = None,
+    rw: discord.Member = None,
+    cm: discord.Member = None,
+    gk: discord.Member = None,
+):
+  global ultimo_painel
+
+  cf_str = cf.display_name if cf else "Vaga Disponível"
+  lw_str = lw.display_name if lw else "Vaga Disponível"
+  rw_str = rw.display_name if rw else "Vaga Disponível"
+  cm_str = cm.display_name if cm else "Vaga Disponível"
+  gk_str = gk.display_name if gk else "Vaga Disponível"
+
+  nova_view = EscalacaoView(
+      cf=cf_str, lw=lw_str, rw=rw_str, cm=cm_str, gk=gk_str
+  )
+
+  if ultimo_painel:
+    try:
+      await ultimo_painel.edit(
+          content=nova_view.gerar_mensagem(), view=nova_view
+      )
+      await interaction.response.send_message(
+          "✅ Escalação moldada e atualizada com sucesso no painel principal!",
+          ephemeral=True,
+      )
+      return
+    except discord.HTTPException:
+      pass
+
+  await interaction.response.send_message(
+      nova_view.gerar_mensagem(), view=nova_view
+  )
+  ultimo_painel = await interaction.original_response()
+
+
+@bot.tree.command(
+    name="rank", description="Cria e exibe o Ranking Top 10 do Blue Lock Rivals"
+)
+@app_commands.describe(
+    top1="Jogador em 1º lugar",
+    top2="Jogador em 2º lugar",
+    top3="Jogador em 3º lugar",
+    top4="Jogador em 4º lugar",
+    top5="Jogador em 5º lugar",
+    top6="Jogador em 6º lugar",
+    top7="Jogador em 7º lugar",
+    top8="Jogador em 8º lugar",
+    top9="Jogador em 9º lugar",
+    top10="Jogador em 10º lugar",
+)
+async def rank(
+    interaction: discord.Interaction,
+    top1: discord.Member = None,
+    top2: discord.Member = None,
+    top3: discord.Member = None,
+    top4: discord.Member = None,
+    top5: discord.Member = None,
+    top6: discord.Member = None,
+    top7: discord.Member = None,
+    top8: discord.Member = None,
+    top9: discord.Member = None,
+    top10: discord.Member = None,
+):
+  posicoes = [
+      ("👑 1º Lugar", top1),
+      ("🥈 2º Lugar", top2),
+      ("🥉 3º Lugar", top3),
+      ("4º Lugar", top4),
+      ("5º Lugar", top5),
+      ("6º Lugar", top6),
+      ("7º Lugar", top7),
+      ("8º Lugar", top8),
+      ("9º Lugar", top9),
+      ("10º Lugar", top10),
+  ]
+
+  descricao = ""
+  for label, membro in posicoes:
+    mencao = membro.mention if membro else "*(Vago)*"
+    descricao += f"**{label}:** {mencao}\n"
+
+  embed = discord.Embed(
+      title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
+      description=descricao,
+      color=discord.Color.from_rgb(255, 215, 0),
+  )
+  embed.set_footer(
+      text=f"Ranking atualizado por {interaction.user.display_name}"
+  )
+
+  await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(
+    name="tryout",
+    description="Abre o painel de treino interno (Time A vs Time B)",
+)
+async def tryout(interaction: discord.Interaction):
+  view = TryoutView()
+  await interaction.response.send_message(view.gerar_mensagem(),
