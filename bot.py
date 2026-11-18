@@ -5,7 +5,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-# 1. Servidor web Flask para o Render manter a porta aberta 24/7
 app = Flask("")
 
 
@@ -25,14 +24,12 @@ def keep_alive():
   t.start()
 
 
-# 2. Configuração do Bot e Intents
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-
 ultimo_painel = None
 
 
@@ -46,7 +43,6 @@ async def on_ready():
     print(f"Erro ao sincronizar comandos: {e}")
 
 
-# 3. View do Painel de Escalação Normal
 class EscalacaoView(discord.ui.View):
 
   def __init__(
@@ -75,7 +71,6 @@ class EscalacaoView(discord.ui.View):
       self, interaction: discord.Interaction, posicao: str
   ):
     user_nome = interaction.user.display_name
-
     for pos, ocupante in self.vagas.items():
       if ocupante == user_nome:
         self.vagas[pos] = "Vaga Disponível"
@@ -137,7 +132,6 @@ class EscalacaoView(discord.ui.View):
     await self.processar_clique(interaction, "GK")
 
 
-# 4. View do Painel de Tryout com Time A em cima e Time B embaixo
 class TryoutView(discord.ui.View):
 
   def __init__(self):
@@ -178,7 +172,6 @@ class TryoutView(discord.ui.View):
       self, interaction: discord.Interaction, time_alvo: str, posicao: str
   ):
     user_nome = interaction.user.display_name
-
     for pos in self.time_a:
       if self.time_a[pos] == user_nome:
         self.time_a[pos] = "Vaga Disponível"
@@ -187,7 +180,6 @@ class TryoutView(discord.ui.View):
         self.time_b[pos] = "Vaga Disponível"
 
     alvo_dict = self.time_a if time_alvo == "A" else self.time_b
-
     if alvo_dict[posicao] == "Vaga Disponível":
       alvo_dict[posicao] = user_nome
       await interaction.response.edit_message(
@@ -200,7 +192,6 @@ class TryoutView(discord.ui.View):
           ephemeral=True,
       )
 
-  # --- BOTÕES DO TIME A (Linha 0) ---
   @discord.ui.button(
       label="A: CF",
       style=discord.ButtonStyle.green,
@@ -256,7 +247,6 @@ class TryoutView(discord.ui.View):
   ):
     await self.processar_tryout(interaction, "A", "GK")
 
-  # --- BOTÕES DO TIME B (Linha 1) ---
   @discord.ui.button(
       label="B: CF",
       style=discord.ButtonStyle.green,
@@ -279,220 +269,4 @@ class TryoutView(discord.ui.View):
   ):
     await self.processar_tryout(interaction, "B", "LW")
 
-  @discord.ui.button(
-      label="B: RW",
-      style=discord.ButtonStyle.blurple,
-      custom_id="try_b_rw",
-      row=1,
-  )
-  async def b_rw(
-      self, interaction: discord.Interaction, button: discord.ui.Button
-  ):
-    await self.processar_tryout(interaction, "B", "RW")
-
-  @discord.ui.button(
-      label="B: CM",
-      style=discord.ButtonStyle.blurple,
-      custom_id="try_b_cm",
-      row=1,
-  )
-  async def b_cm(
-      self, interaction: discord.Interaction, button: discord.ui.Button
-  ):
-    await self.processar_tryout(interaction, "B", "CM")
-
-  @discord.ui.button(
-      label="B: GK",
-      style=discord.ButtonStyle.red,
-      custom_id="try_b_gk",
-      row=1,
-  )
-  async def b_gk(
-      self, interaction: discord.Interaction, button: discord.ui.Button
-  ):
-    await self.processar_tryout(interaction, "B", "GK")
-
-
-# 5. View para o sistema de X1 com restrição de utilizador
-class X1View(discord.ui.View):
-
-  def __init__(self, desafiado_id: int):
-    super().__init__(timeout=180)
-    self.desafiado_id = desafiado_id
-
-  @discord.ui.button(
-      label="Aceitar", style=discord.ButtonStyle.green, custom_id="x1_aceitar"
-  )
-  async def aceitar(
-      self, interaction: discord.Interaction, button: discord.ui.Button
-  ):
-    if interaction.user.id != self.desafiado_id:
-      await interaction.response.send_message(
-          "Apenas o jogador desafiado pode responder a este convite!",
-          ephemeral=True,
-      )
-      return
-
-    for child in self.children:
-      child.disabled = True
-
-    await interaction.response.edit_message(
-        content=(
-            f"✅ **X1 ACEITE!** {interaction.user.mention} aceitou o desafio!"
-            " Que comece o duelo! ⚔️"
-        ),
-        view=self,
-    )
-    self.stop()
-
-  @discord.ui.button(
-      label="Recusar", style=discord.ButtonStyle.red, custom_id="x1_recusar"
-  )
-  async def recusar(
-      self, interaction: discord.Interaction, button: discord.ui.Button
-  ):
-    if interaction.user.id != self.desafiado_id:
-      await interaction.response.send_message(
-          "Apenas o jogador desafiado pode responder a este convite!",
-          ephemeral=True,
-      )
-      return
-
-    for child in self.children:
-      child.disabled = True
-
-    await interaction.response.edit_message(
-        content=(
-            f"❌ **X1 RECUSADO.** {interaction.user.mention} recusou o desafio."
-        ),
-        view=self,
-    )
-    self.stop()
-
-
-# 6. Comandos de Barra (Slash Commands)
-@bot.tree.command(
-    name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
-)
-async def escalacao(interaction: discord.Interaction):
-  global ultimo_painel
-  view = EscalacaoView()
-  await interaction.response.send_message(view.gerar_mensagem(), view=view)
-  ultimo_painel = await interaction.original_response()
-
-
-@bot.tree.command(
-    name="moldar_escalacao",
-    description="Molda a escalação e atualiza o painel principal diretamente",
-)
-@app_commands.describe(
-    cf="Jogador para a posição CF",
-    lw="Jogador para a posição LW",
-    rw="Jogador para a posição RW",
-    cm="Jogador para a posição CM",
-    gk="Jogador para a posição GK",
-)
-async def moldar_escalacao(
-    interaction: discord.Interaction,
-    cf: discord.Member = None,
-    lw: discord.Member = None,
-    rw: discord.Member = None,
-    cm: discord.Member = None,
-    gk: discord.Member = None,
-):
-  global ultimo_painel
-
-  cf_str = cf.display_name if cf else "Vaga Disponível"
-  lw_str = lw.display_name if lw else "Vaga Disponível"
-  rw_str = rw.display_name if rw else "Vaga Disponível"
-  cm_str = cm.display_name if cm else "Vaga Disponível"
-  gk_str = gk.display_name if gk else "Vaga Disponível"
-
-  nova_view = EscalacaoView(
-      cf=cf_str, lw=lw_str, rw=rw_str, cm=cm_str, gk=gk_str
-  )
-
-  if ultimo_painel:
-    try:
-      await ultimo_painel.edit(
-          content=nova_view.gerar_mensagem(), view=nova_view
-      )
-      await interaction.response.send_message(
-          "✅ Escalação moldada e atualizada com sucesso no painel principal!",
-          ephemeral=True,
-      )
-      return
-    except discord.HTTPException:
-      pass
-
-  await interaction.response.send_message(
-      nova_view.gerar_mensagem(), view=nova_view
-  )
-  ultimo_painel = await interaction.original_response()
-
-
-@bot.tree.command(
-    name="rank", description="Cria e exibe o Ranking Top 10 do Blue Lock Rivals"
-)
-@app_commands.describe(
-    top1="Jogador em 1º lugar",
-    top2="Jogador em 2º lugar",
-    top3="Jogador em 3º lugar",
-    top4="Jogador em 4º lugar",
-    top5="Jogador em 5º lugar",
-    top6="Jogador em 6º lugar",
-    top7="Jogador em 7º lugar",
-    top8="Jogador em 8º lugar",
-    top9="Jogador em 9º lugar",
-    top10="Jogador em 10º lugar",
-)
-async def rank(
-    interaction: discord.Interaction,
-    top1: discord.Member = None,
-    top2: discord.Member = None,
-    top3: discord.Member = None,
-    top4: discord.Member = None,
-    top5: discord.Member = None,
-    top6: discord.Member = None,
-    top7: discord.Member = None,
-    top8: discord.Member = None,
-    top9: discord.Member = None,
-    top10: discord.Member = None,
-):
-  posicoes = [
-      ("👑 1º Lugar", top1),
-      ("🥈 2º Lugar", top2),
-      ("🥉 3º Lugar", top3),
-      ("4º Lugar", top4),
-      ("5º Lugar", top5),
-      ("6º Lugar", top6),
-      ("7º Lugar", top7),
-      ("8º Lugar", top8),
-      ("9º Lugar", top9),
-      ("10º Lugar", top10),
-  ]
-
-  descricao = ""
-  for label, membro in posicoes:
-    mencao = membro.mention if membro else "*(Vago)*"
-    descricao += f"**{label}:** {mencao}\n"
-
-  embed = discord.Embed(
-      title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
-      description=descricao,
-      color=discord.Color.from_rgb(255, 215, 0),
-  )
-  embed.set_footer(
-      text=f"Ranking atualizado por {interaction.user.display_name}"
-  )
-
-  await interaction.response.send_message(embed=embed)
-
-
-@bot.tree.command(
-    name="tryout",
-    description="Abre o painel de treino interno (Time A vs Time B)",
-)
-async def tryout(interaction: discord.Interaction):
-  view = TryoutView()
-  await interaction.response.send_message(view.gerar_mensagem(),
+  @discord.ui.
