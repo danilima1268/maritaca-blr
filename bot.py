@@ -269,4 +269,106 @@ class TryoutView(discord.ui.View):
   ):
     await self.processar_tryout(interaction, "B", "LW")
 
-  @discord.ui.
+  @discord.ui.button(
+      label="B: RW",
+      style=discord.ButtonStyle.blurple,
+      custom_id="try_b_rw",
+      row=1,
+  )
+  async def b_rw(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "RW")
+
+  @discord.ui.button(
+      label="B: CM",
+      style=discord.ButtonStyle.blurple,
+      custom_id="try_b_cm",
+      row=1,
+  )
+  async def b_cm(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "CM")
+
+  @discord.ui.button(
+      label="B: GK",
+      style=discord.ButtonStyle.red,
+      custom_id="try_b_gk",
+      row=1,
+  )
+  async def b_gk(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    await self.processar_tryout(interaction, "B", "GK")
+
+
+class X1View(discord.ui.View):
+
+  def __init__(self, desafiado_id: int):
+    super().__init__(timeout=180)
+    self.desafiado_id = desafiado_id
+
+  @discord.ui.button(
+      label="Aceitar", style=discord.ButtonStyle.green, custom_id="x1_aceitar"
+  )
+  async def aceitar(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    if interaction.user.id != self.desafiado_id:
+      await interaction.response.send_message(
+          "Apenas o jogador desafiado pode responder a este convite!",
+          ephemeral=True,
+      )
+      return
+    for child in self.children:
+      child.disabled = True
+    await interaction.response.edit_message(
+        content=(
+            f"✅ **X1 ACEITE!** {interaction.user.mention} aceitou o desafio!"
+            " Que comece o duelo! ⚔️"
+        ),
+        view=self,
+    )
+    self.stop()
+
+  @discord.ui.button(
+      label="Recusar", style=discord.ButtonStyle.red, custom_id="x1_recusar"
+  )
+  async def recusar(
+      self, interaction: discord.Interaction, button: discord.ui.Button
+  ):
+    if interaction.user.id != self.desafiado_id:
+      await interaction.response.send_message(
+          "Apenas o jogador desafiado pode responder a este convite!",
+          ephemeral=True,
+      )
+      return
+    for child in self.children:
+      child.disabled = True
+    await interaction.response.edit_message(
+        content=(
+            f"❌ **X1 RECUSADO.** {interaction.user.mention} recusou o desafio."
+        ),
+        view=self,
+    )
+    self.stop()
+
+
+@bot.tree.command(
+    name="escalacao", description="Abre o painel de escalação do Blue Lock Rivals"
+)
+async def escalacao(interaction: discord.Interaction):
+  global ultimo_painel
+  view = EscalacaoView()
+  await interaction.response.send_message(view.gerar_mensagem(), view=view)
+  ultimo_painel = await interaction.original_response()
+
+
+@bot.tree.command(
+    name="moldar_escalacao",
+    description="Molda a escalação e atualiza o painel principal diretamente",
+)
+@app_commands.describe(
+    cf="Jogador para a posição CF",
+    lw="Jogador para a posição LW
