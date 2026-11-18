@@ -424,3 +424,89 @@ async def rank(
     top1: discord.Member = None,
     top2: discord.Member = None,
     top3: discord.Member = None,
+    top4: discord.Member = None,
+    top5: discord.Member = None,
+    top6: discord.Member = None,
+    top7: discord.Member = None,
+    top8: discord.Member = None,
+    top9: discord.Member = None,
+    top10: discord.Member = None,
+):
+  posicoes = [
+      ("👑 1º Lugar", top1),
+      ("🥈 2º Lugar", top2),
+      ("🥉 3º Lugar", top3),
+      ("4º Lugar", top4),
+      ("5º Lugar", top5),
+      ("6º Lugar", top6),
+      ("7º Lugar", top7),
+      ("8º Lugar", top8),
+      ("9º Lugar", top9),
+      ("10º Lugar", top10),
+  ]
+
+  descricao = ""
+  for label, membro in posicoes:
+    mencao = membro.mention if membro else "*(Vago)*"
+    descricao += f"**{label}:** {mencao}\n"
+
+  embed = discord.Embed(
+      title="🏆 RANKING OFICIAL — TOP 10 BLUE LOCK RIVALS",
+      description=descricao,
+      color=discord.Color.from_rgb(255, 215, 0),
+  )
+  embed.set_footer(
+      text=f"Ranking atualizado por {interaction.user.display_name}"
+  )
+
+  await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(
+    name="tryout",
+    description="Abre o painel de treino interno (Time A vs Time B)",
+)
+async def tryout(interaction: discord.Interaction):
+  view = TryoutView()
+  await interaction.response.send_message(view.gerar_mensagem(), view=view)
+
+
+@bot.tree.command(
+    name="x1", description="Desafia outro jogador para um X1 no Blue Lock Rivals"
+)
+@app_commands.describe(adversario="O jogador que queres desafiar para o X1")
+async def x1(interaction: discord.Interaction, adversario: discord.Member):
+  autor = interaction.user
+
+  if adversario.id == autor.id:
+    await interaction.response.send_message(
+        "Não podes desafiar a ti próprio para um X1!", ephemeral=True
+    )
+    return
+
+  if adversario.bot:
+    await interaction.response.send_message(
+        "Não podes desafiar um bot para um X1!", ephemeral=True
+    )
+    return
+
+  view = X1View(desafiado_id=adversario.id)
+  await interaction.response.send_message(
+      f"⚔️ {autor.mention} convidou {adversario.mention} para um x1 👀!",
+      view=view,
+  )
+
+
+@bot.tree.command(name="ping", description="Verifica o estado do bot")
+async def ping(interaction: discord.Interaction):
+  await interaction.response.send_message("Pong! ⚽ Bot operacional.")
+
+
+# 7. Arranque do Bot
+if __name__ == "__main__":
+  keep_alive()
+  token = os.getenv("DISCORD_TOKEN")
+  if token:
+    bot.run(token)
+  else:
+    print("Erro: A variável de ambiente DISCORD_TOKEN não está definida!")
